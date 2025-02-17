@@ -14,6 +14,7 @@ export const chatbotResponse = async (
   req: Request,
   res: Response
 ): Promise<void> => {
+  // 🔹 Step 1: Extract and Validate Request Data
   try {
     let { employeeId, message } = req.body;
     if (!employeeId || !message) {
@@ -27,6 +28,7 @@ export const chatbotResponse = async (
       return;
     }
 
+    // 🔹 Step 2: Retrieve Employee Data
     const employee = await Employee.findById(
       new mongoose.Types.ObjectId(employeeId)
     );
@@ -35,37 +37,18 @@ export const chatbotResponse = async (
       return;
     }
 
-    const chatHistory = await ChatHistory.findOne({ employeeId, message });
-    if (chatHistory) {
-      res.json({ message: chatHistory.response });
-      return;
-    }
+    // 🔹 Step 3: Fetch the Last 5 Messages from Chat History (if available)
+    let chatHistory = await ChatHistory.findOne({ employeeId });
+    const lastMessages = chatHistory?.messages
+      ? chatHistory.messages.slice(-5)
+      : [];
+    const previousMessage = lastMessages
+      .map(
+        (msg) => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.text}`
+      )
+      .join('\n');
 
-    const greeting = `Hello ${employee.name}!`;
-    const workAnniversary = employee.workAnniversary
-      ? new Date(employee.workAnniversary).toDateString()
-      : 'Work anniversary not available';
-    const vacationStatus = `You have ${
-      employee.vacationDays - employee.vacationTaken
-    } vacation days left.`;
-    const sickLeaveStatus = `This employee has ${employee.sickLeaves} sick leves left`;
-
-    let additionalContext = `${greeting}\n${workAnniversary}\n${sickLeaveStatus}\n${vacationStatus}\n`;
-
-    if (employee.department.toLowerCase() === 'human resources') {
-      additionalContext +=
-        'You are an HR staff member, so you can also answer questions about company policies, payroll, and hiring procedures.';
-    }
-
-    const hrKnowledge = `
-      Company HR Policies:
-      - Employees can take up to ${employee.maxSickleaves} sick leaves per year.
-      - You can request vacation days through the HR portal.
-      - Salaries are processed on the 25th of each month.
-      - For workplace issues, contact the HR team at hr@company.com.
-    `;
-
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    // 🔹 Step 4: Generate AI Prompt with Employee Data and Chat History
     const prompt = `
     You are an HR assistant chatbot that answers employee questions in a friendly, professional manner.
     You have access to the following details about the employee:
@@ -91,10 +74,14 @@ export const chatbotResponse = async (
 
   **Your task**: Answer the employee's question using the provided information. DO NOT say you "do not have access to this information." If a question is unclear, ask for clarification.
 `;
-    console.log('sending prompt to gemini:\n', prompt);
+
+    // 🔹 Step 5: Send Request to Google Gemini AI
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
     const result = await model.generateContent(prompt);
 
     console.log('Full AI Response:', JSON.stringify(result, null, 2));
+
+    // 🔹 Step 6: Extract AI Response Text
     let aiResponse = 'No response generated';
     if (
       result?.response?.candidates &&
@@ -105,10 +92,48 @@ export const chatbotResponse = async (
         result.response.candidates[0].content.parts
           .map((part: any) => part.text)
           .join('\n') || 'No response generated.'),
+        // ✅ Remove unnecessary line breaks for cleaner formatting
         (aiResponse = aiResponse.replace(/\n+/g, ' '));
     }
 
-    await ChatHistory.create({ employeeId, message, response: aiResponse });
+    if (!chatHistory) {
+      await ChatHistory.create({
+        employeeId,
+        messages: [
+          {
+            role: 'user',
+            text: message || 'No message provided',
+            timestamp: new Date(),
+          },
+          {
+            role: 'assistant',
+            text: aiResponse || 'No API response',
+            timestamp: new Date(),
+          },
+        ],
+      });
+    } else {
+      if (!chatHistory || !Array.isArray(chatHistory.messages)) {
+        chatHistory = new ChatHistory({
+          employeeId,
+          messages: [],
+        });
+      }
+      if (!Array.isArray(chatHistory.messages)) {
+        chatHistory.messages = [];
+      }
+      chatHistory.messages.push({
+        role: 'user',
+        text: message,
+        timestamp: new Date(),
+      });
+      chatHistory.messages.push({
+        role: 'assistant',
+        text: aiResponse,
+        timestamp: new Date(),
+      });
+      await chatHistory.save();
+    }
 
     res.status(200).json({ response: aiResponse });
     return;
