@@ -8,15 +8,15 @@ const getEmployees = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const addEmployee = asyncHandler(async (req: Request, res: Response) => {
-  const { name, email, position } = req.body;
-  const newEmployee = new Employee({ name, email, position });
+  const { name, email, position, department } = req.body;
+  const newEmployee = new Employee({ name, email, position, department });
   await newEmployee.save();
   res.status(201).json(newEmployee);
 });
 
 const markAttendance = asyncHandler(async (req: Request, res: Response) => {
-  const { email, date, status } = req.body;
-  const employee = await Employee.findOne({ email });
+  const { name, date, status } = req.body;
+  const employee = await Employee.findOne({ name });
   if (!employee) {
     res.status(404).json({ message: 'Employee not found' });
     return;

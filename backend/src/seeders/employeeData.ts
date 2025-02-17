@@ -1,8 +1,13 @@
 export const employeeData = {
-  name: 'Maria Callas',
-  email: 'maria.callas@example.com',
+  name: 'Sophia Carter',
+  email: 'sophia.carter@example.com',
   position: 'Software Engineer',
+  department: 'IT',
+  workAnniversary: '2020-06-15T00:00:00Z',
+  maxSickLeaves: 30,
   sickLeaves: 1,
+  vacationDays: 35,
+  vacationTaken: 5,
   attendance: [
     { date: '2025-02-01', status: 'Present' },
     { date: '2025-02-02', status: 'Absent' },
