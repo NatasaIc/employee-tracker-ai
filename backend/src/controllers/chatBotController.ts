@@ -96,6 +96,36 @@ export const chatbotResponse = async (
         (aiResponse = aiResponse.replace(/\n+/g, ' '));
     }
 
+    //🔹 Step 7: Generate Adaptive Follow-ups Based on the User's Question
+    let followUpQuestion = '';
+
+    if (message.toLowerCase().includes('vacation')) {
+      followUpQuestion = 'Would you like to request time off?';
+    } else if (
+      message.toLowerCase().includes('sick leave') ||
+      message.toLowerCase().includes('sick days')
+    ) {
+      followUpQuestion = 'Do you need to report a sick day?';
+    } else if (
+      message.toLowerCase().includes('payday') ||
+      message.toLowerCase().includes('salary')
+    ) {
+      followUpQuestion = 'Do you have payroll-related concerns? 💰';
+    } else if (
+      message.toLowerCase().includes('hr policy') ||
+      message.toLowerCase().includes('remote work')
+    ) {
+      followUpQuestion = 'Would you like to read the full HR policy? 📜';
+    } else if (message.toLowerCase().includes('work anniversary')) {
+      followUpQuestion =
+        'Would you like to see any company perks for long-term employees? 🎉';
+    }
+
+    if (followUpQuestion) {
+      aiResponse += `${followUpQuestion}`;
+    }
+
+    // 🔹 Step 8: Store Conversation History
     if (!chatHistory) {
       await ChatHistory.create({
         employeeId,
@@ -135,9 +165,11 @@ export const chatbotResponse = async (
       await chatHistory.save();
     }
 
+    // 🔹 Step 9: Send Response to the User
     res.status(200).json({ response: aiResponse });
     return;
   } catch (error) {
+    // 🔹 Step 10: Handle Errors
     console.error('Error processing chatbot request:', error);
     res.status(500).json({ message: 'Error processing request' });
     return;
