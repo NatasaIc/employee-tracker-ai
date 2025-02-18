@@ -3,6 +3,7 @@ export const employeeData = {
   email: 'sophia.carter@example.com',
   position: 'Software Engineer',
   department: 'IT',
+  userRole: 'employee',
   workAnniversary: '2020-06-15T00:00:00Z',
   maxSickLeaves: 30,
   sickLeaves: 1,

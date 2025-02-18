@@ -8,8 +8,20 @@ const getEmployees = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const addEmployee = asyncHandler(async (req: Request, res: Response) => {
-  const { name, email, position, department } = req.body;
-  const newEmployee = new Employee({ name, email, position, department });
+  const { name, email, position, department, userRole } = req.body;
+
+  if (!userRole || !['employee', 'manager', 'admin'].includes(userRole)) {
+    res.status(400).json({ message: 'Invalid user role' });
+    return;
+  }
+
+  const newEmployee = new Employee({
+    name,
+    email,
+    position,
+    department,
+    userRole,
+  });
   await newEmployee.save();
   res.status(201).json(newEmployee);
 });
