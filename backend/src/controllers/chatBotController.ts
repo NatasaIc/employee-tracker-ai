@@ -32,7 +32,7 @@ export const chatbotResponse = async (
       .join('\n');
 
     // ✅ Step 3: Generate AI Prompt and Fetch AI Response
-    const prompt = generateAiPrompt(employee, previousMessages, message);
+    const prompt = await generateAiPrompt(employee, previousMessages, message);
     let aiResponse = await fetchAiResponse(prompt);
 
     // ✅ Step 4: Append Follow-up Suggestion

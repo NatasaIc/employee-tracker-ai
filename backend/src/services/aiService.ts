@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
 import path from 'path';
+import Employee from '../models/employeeModel';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../config.env') });
 
@@ -19,21 +20,49 @@ const getAssistantTone = (userRole: string) => {
 };
 
 // 🔹 Generate AI Prompt based on Employee Data
-export const generateAiPrompt = (
+export const generateAiPrompt = async (
   employee: any,
   previousMessages: string,
   message: string
 ) => {
   const assistantTone = getAssistantTone(employee.role);
 
+  const workAnniversary = employee.workAnniversary
+    ? new Date(employee.workAnniversary).toDateString()
+    : 'Not available';
+
+  let teamSickLeaves = '';
+
+  if (employee.userRole === 'manager') {
+    const teamMembers = await Employee.find({
+      department: employee.department,
+      userRole: 'employee',
+    });
+
+    let totalSickDays = 0;
+    let teamReport: string[] = [];
+
+    teamMembers.forEach((teamMember) => {
+      totalSickDays += teamMember.sickLeaves;
+      teamReport.push(`${teamMember.name}: ${teamMember.sickLeaves} sick days`);
+    });
+
+    teamSickLeaves = `As a team lead, you have access to your team's sick leave records. Your team has used a total of ${totalSickDays} sick days. Here is a breakdown:\n${teamReport.join(
+      '\n'
+    )}`;
+  }
+
   return `
   ${assistantTone}
+
+   You are **HRBot**, an AI assistant designed to help employees and managers with HR-related queries.
+    Always sign your messages as HRBot and never use [Your Name] or leave it blank. 
 
        You have access to the following details about the employee:
     - Name: ${employee.name}
     - Position: ${employee.position}
     - Department: ${employee.department}
-    - Work Anniversary: ${employee.workAnniversary.toDateString()}
+    - Work Anniversary: ${employee.workAnniversary}
     - Maximum Sick Leaves: ${employee.maxSickleaves}
     - Sick Leaves Used: ${employee.sickLeaves}
     - Vacation Days Allocated: ${employee.vacationDays}
@@ -46,6 +75,8 @@ export const generateAiPrompt = (
     - Salaries are processed on the 25th of each month.
     - For workplace issues, contact HR at hr@company.com.
 
+    ${teamSickLeaves}
+
     **Previous Conversation History (last 5 messages):**
     ${previousMessages}
 
@@ -54,8 +85,9 @@ export const generateAiPrompt = (
 
     **Your task**: Answer based on the user's role.
     - If they are an employee, be engaging and friendly.
-    - If they are a manager, be professional but approachable.
+    - If they are a manager, be professional.
     - If they are an admin, provide clear, precise, and formal responses.
+    - If workAnniversary is not available, do not mention it.
   `;
 };
 
@@ -80,17 +112,17 @@ export const fetchAiResponse = async (prompt: string) => {
 export const generateFollowUpQuestion = (message: string) => {
   const lowerMessage = message.toLowerCase();
   if (lowerMessage.includes('vacation'))
-    return 'Would you like to request time off? 🌴';
+    return 'Would you like to request time off?';
   if (lowerMessage.includes('sick leave') || lowerMessage.includes('sick days'))
-    return 'Do you need to report a sick day? 🤒';
+    return 'Do you need to report a sick day? ';
   if (lowerMessage.includes('payday') || lowerMessage.includes('salary'))
-    return 'Do you have payroll-related concerns? 💰';
+    return 'Do you have payroll-related concerns?';
   if (
     lowerMessage.includes('hr policy') ||
     lowerMessage.includes('remote work')
   )
-    return 'Would you like to read the full HR policy? 📜';
+    return 'Would you like to read the full HR policy?';
   if (lowerMessage.includes('work anniversary'))
-    return 'Would you like to see any company perks for long-term employees? 🎉';
+    return 'Would you like to see any company perks for long-term employees?';
   return '';
 };
