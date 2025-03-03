@@ -12,6 +12,8 @@ export interface IEmployee extends Document {
   vacationDays: number;
   vacationTaken: number;
   attendance: { date: string; status: 'Present' | 'Absent' }[];
+  overTimeHours: number;
+  projectDeadlines: number;
 }
 
 const EmployeeSchema: Schema = new Schema({
@@ -30,6 +32,8 @@ const EmployeeSchema: Schema = new Schema({
   vacationDays: { type: Number, default: 35 },
   vacationTaken: { type: Number, default: 0 },
   attendance: [{ date: String, status: String }],
+  overtimeHours: { type: Number, default: 0 },
+  projectDeadlines: { type: Number, default: 0 },
 });
 
 const Employee = mongoose.model<IEmployee>('Employee', EmployeeSchema);
